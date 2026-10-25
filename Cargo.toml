@@ -1,0 +1,10 @@
+[package]
+name = "maddi-adventure"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenvy = "0.15.7"
+poise = "0.7.1"
+strum = { version = "0.28.0", features = ["derive"] } 
+tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
