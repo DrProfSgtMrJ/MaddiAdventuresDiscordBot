@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 use strum::{EnumIter};
 
 // Defines the different character classes in the game
-#[derive(Debug, EnumIter)]
+#[derive(Debug, EnumIter, Copy, Clone)]
 pub enum Class {
     Warrior,
     Mage,
