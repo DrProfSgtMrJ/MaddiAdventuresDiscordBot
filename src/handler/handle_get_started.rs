@@ -1,9 +1,7 @@
 use poise::serenity_prelude::{
     ActionRowComponent,
-    ButtonStyle,
     CreateActionRow,
     CreateAttachment,
-    CreateButton,
     CreateEmbed,
     CreateEmbedFooter,
     CreateInteractionResponse,
@@ -17,7 +15,7 @@ use poise::serenity_prelude::{
 use strum::IntoEnumIterator;
 use std::time::Duration;
 
-use crate::components::{modal::Modal, input_text::InputText};
+use crate::components::{modal::Modal, input_text::InputText, button::ClassButton};
 use crate::commands::{Context, Error};
 use crate::models::class::Class;
 use crate::models::stats::BaseStats;
@@ -70,9 +68,9 @@ async fn class_view(index: usize) -> Result<(CreateEmbed, Vec<CreateActionRow>, 
         .image(format!("attachment://{}", attachment.filename));
 
     let buttons = CreateActionRow::Buttons(vec![
-        CreateButton::new("class_prev").label("◀").style(ButtonStyle::Secondary),
-        CreateButton::new("class_select").label("Select").style(ButtonStyle::Success),
-        CreateButton::new("class_next").label("▶").style(ButtonStyle::Secondary),
+        ClassButton::Prev.into(),
+        ClassButton::Select.into(),
+        ClassButton::Next.into(),
     ]);
 
     Ok((embed, vec![buttons], attachment))
