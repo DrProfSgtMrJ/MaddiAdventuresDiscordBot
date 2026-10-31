@@ -3,7 +3,6 @@ use poise::serenity_prelude::{
     CreateActionRow,
     CreateAttachment,
     CreateEmbed,
-    CreateEmbedFooter,
     CreateInteractionResponse,
     ModalInteraction,
     ModalInteractionCollector,
@@ -15,10 +14,9 @@ use poise::serenity_prelude::{
 use strum::IntoEnumIterator;
 use std::time::Duration;
 
-use crate::components::{modal::Modal, input_text::InputText, button::ClassButton};
+use crate::components::{modal::Modal, input_text::InputText, button::ClassButton, embed::ClassEmbed};
 use crate::commands::{Context, Error};
 use crate::models::class::Class;
-use crate::models::stats::BaseStats;
 
 pub async fn handle_get_started_name_input(
     ctx: &Context<'_>
@@ -51,28 +49,17 @@ pub async fn handle_get_started_name_input(
     Ok((name, modal_response))
 }
 
-const ASSETS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/assets");
 async fn class_view(index: usize) -> Result<(CreateEmbed, Vec<CreateActionRow>, CreateAttachment), Error> {
     let class_vec: &Vec<Class> = &Class::iter().collect();
-    let class = &class_vec[index];
-    let s = class.base_stats();
-
-    let attachment = CreateAttachment::path(format!("{}/{}.jpeg", ASSETS_DIR, class)).await?;
-    let embed = CreateEmbed::default()
-        .title(format!("{:?}", class))
-        .footer(CreateEmbedFooter::new(format!("Class {} of {}", index + 1, class_vec.len())))
-        .field("Health", s.health.to_string(), true)
-        .field("Strength", s.strength.to_string(), true)
-        .field("Dexterity", s.dexterity.to_string(), true)
-        .field("Intelligence", s.intelligence.to_string(), true)
-        .image(format!("attachment://{}", attachment.filename));
-
+    let class = class_vec[index];
+    let class_embed = ClassEmbed::new(index, class).await?;
     let buttons = CreateActionRow::Buttons(vec![
         ClassButton::Prev.into(),
         ClassButton::Select.into(),
         ClassButton::Next.into(),
     ]);
-
+    let embed = class_embed.create_embed().await?;
+    let attachment = class_embed.attachment;
     Ok((embed, vec![buttons], attachment))
 }
 
@@ -115,22 +102,31 @@ pub async fn choose_class(
         // Ack immediately so Discord's 3-second window is never an issue
         press.create_response(sctx, CreateInteractionResponse::Acknowledge).await?;
 
-        match press.data.custom_id.as_str() {
-            "class_prev" => index = (index + len - 1) % len,
-            "class_next" => index = (index + 1) % len,
-            "class_select" => {
-                let class = class_vec.get(index).unwrap();
-                press
-                    .edit_response(
-                        sctx,
-                        EditInteractionResponse::new()
-                            .content(format!("You chose **{}**!", class))
-                            .components(vec![]),
-                    )
-                    .await?;
-                return Ok(Some(*class));
-            }
-            _ => continue,
+        let custom_id = press.data.custom_id.as_str();
+        println!("Button pressed with custom_id: {}", custom_id);
+
+        if custom_id ==  ClassButton::Prev.id().as_str() {
+            index = (index + len - 1) % len;
+            println!("Prev button pressed, new index: {}", index);
+        }
+        else if custom_id == ClassButton::Next.id().as_str() {
+            index = (index + 1) % len;
+            println!("Next button pressed, new index: {}", index);
+        }
+        else if custom_id == ClassButton::Select.id().as_str() {
+            let class = class_vec[index];
+            press
+                .edit_response(
+                    sctx,
+                    EditInteractionResponse::new()
+                        .content(format!("You chose **{}**!", class))
+                        .components(vec![]),
+                )
+                .await?;
+            return Ok(Some(class));
+        }
+        else {
+            println!("Unknown button pressed with custom_id: {}", custom_id);
         }
 
         let (embed, components, attachment) = class_view(index).await?;
